@@ -12,6 +12,7 @@ srv_lwip = []
 srv_hikvision = []
 srv_xiongmai = []
 srv_goahead = []
+srv_error = []
 
 def leer_listado(file):
 	file = minidom.parse(file)
@@ -43,22 +44,31 @@ def server_reader(ip,port):
 			srv_lwip.append(ip)
 		elif server == 'GoAhead-Webs':
 			srv_goahead.append(ip)
+	except KeyError:
+		srv_error.append(ip)
+		
+	except httpx.ReadTimeout:
+		srv_error.append(ip)
+		
 	except httpx.ConnectTimeout:
-		print("IP: " + ip + " No contesta.")
+		srv_error.append(ip)
+		
 	except httpx.RemoteProtocolError:
-		print("IP: " + ip + " No contesta.")
+		srv_error.append(ip)
+		
 		
 def imprimir():
 	print("== Resultados")
 
 	print("= GoAhead-Webs: " + str(len(srv_goahead)))
-	for res in srv_goahead:
+	for res in srv_goahead: 
 		print("== http://" + res + ":" + port)
 
 	print("= DNVRS-Webs: " + str(len(srv_dnvrs)))
 	print("= Hikvision DVR: " + str(len(srv_hikvision)))
 	print("= XiongMai uc-httpd: " + str(len(srv_xiongmai)))
 	print("= Lightweight IP: " + str(len(srv_lwip)))
+	print("= IP con Error: " + str(len(srv_error)))
 
 def brute_pass(dir_ip,port):
 	user_web = ['admin','']
@@ -81,6 +91,7 @@ def main():
 	print("= Escaneando " + str(len(lista_ip)) + " Hosts")
 	print("======================")
 	for ip in lista_ip:
+		#print(ip)
 		server_reader(ip,port)
 	imprimir()
 	print("======================")
